@@ -59,4 +59,22 @@ if username:
                     response = client.chat.completions.create(
                         model="gpt-4.1-nano",
                         messages=[
-                            {"
+                            {"role": "system", "content": "You are an English tutor. Answer clearly and helpfully."},
+                            {"role": "user", "content": user_input}
+                        ]
+                    )
+                    answer = response.choices[0].message.content
+                    st.write(f"🤖 **Tutor:** {answer}")
+
+                    # Actual token usage
+                    tokens_used = response.usage.total_tokens
+                    tokens_data[username] -= tokens_used
+                    save_tokens(tokens_data)
+                    st.success(f"Tokens used: {tokens_used}. Remaining: {tokens_data[username]}")
+
+                    # ✅ Clear input for next question
+                    st.session_state["user_input"] = ""
+            else:
+                st.warning("Please enter a question.")
+else:
+    st.info("Please enter your username to begin.")
