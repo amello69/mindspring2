@@ -1,30 +1,69 @@
 import streamlit as st
 from openai import OpenAI
+import os
 
-# Secure API key from .streamlit/secrets.toml
 client = OpenAI(api_key=st.secrets["OPENAI"]["API_KEY"])
 
-st.title("🗣️ Simple AI English Tutor")
+# Load or create user_tokens.txt
+if not os.path.exists("user_tokens.txt"):
+    with open("user_tokens.txt", "w") as f:
+        pass
 
-# Input box
-user_input = st.text_area("Ask your tutor anything:")
+def load_tokens():
+    tokens = {}
+    with open("user_tokens.txt", "r") as f:
+        for line in f:
+            parts = line.strip().split(":")
+            if len(parts) == 2:
+                tokens[parts[0]] = int(parts[1])
+    return tokens
 
-if st.button("Submit"):
-    if user_input.strip():
-        with st.spinner("Thinking..."):
-            # Call OpenAI with no history
-            response = client.chat.completions.create(
-                model="gpt-4.1-nano",
-                messages=[
-                    {"role": "system", "content": "You are an English tutor. Answer clearly and helpfully."},
-                    {"role": "user", "content": user_input}
-                ]
-            )
-            answer = response.choices[0].message.content
-            st.write(f"🤖 **Tutor:** {answer}")
+def save_tokens(tokens):
+    with open("user_tokens.txt", "w") as f:
+        for user, token_count in tokens.items():
+            f.write(f"{user}:{token_count}\n")
 
-            # Estimate tokens based on word count
-            tokens_used = len(user_input.split()) // 2 + len(answer.split()) // 2
-            st.info(f"Estimated tokens used: {tokens_used}")
+# --- UI ---
+st.image("logo.png", width=200)
+st.title("🗣️ English Tutor")
+
+username = st.text_input("Enter your username:")
+
+if username:
+    tokens_data = load_tokens()
+
+    if username not in tokens_data:
+        tokens_data[username] = 1000
+        save_tokens(tokens_data)
+
+    tokens_remaining = tokens_data[username]
+    st.subheader(f"Hello, {username}!")
+    st.markdown(f"**Tokens remaining:** {tokens_remaining}")
+
+    if tokens_remaining <= 0:
+        st.error("You have used up all your tokens. Please purchase more to continue.")
     else:
-        st.warning("Please enter a question.")
+        user_input = st.text_area("Ask your tutor anything:")
+
+        if st.button("Submit"):
+            if user_input.strip():
+                with st.spinner("Thinking..."):
+                    response = client.chat.completions.create(
+                        model="gpt-4.1-nano",
+                        messages=[
+                            {"role": "system", "content": "You are an English tutor. Answer clearly and helpfully."},
+                            {"role": "user", "content": user_input}
+                        ]
+                    )
+                    answer = response.choices[0].message.content
+                    st.write(f"🤖 **Tutor:** {answer}")
+
+                    # ✅ Real OpenAI tokens
+                    tokens_used = response.usage.total_tokens
+                    tokens_data[username] -= tokens_used
+                    save_tokens(tokens_data)
+                    st.success(f"Tokens used: {tokens_used}. Remaining: {tokens_data[username]}")
+            else:
+                st.warning("Please enter a question.")
+else:
+    st.info("Please enter your username to begin.")
