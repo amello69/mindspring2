@@ -26,7 +26,7 @@ def save_tokens(tokens):
 
 # --- UI ---
 st.image("logo.png", width=200)
-st.title("🗣️ English Tutor")
+st.title("🗣️ Science Tutor")
 
 username = st.text_input("Enter your username:")
 
