@@ -5,7 +5,7 @@ import os
 # Load OpenAI API key from Streamlit secrets
 client = OpenAI(api_key=st.secrets["OPENAI"]["API_KEY"])
 
-# Load or create user_tokens.txt
+# --- File handling for token counts ---
 if not os.path.exists("user_tokens.txt"):
     with open("user_tokens.txt", "w") as f:
         pass
@@ -24,11 +24,11 @@ def save_tokens(tokens):
         for user, token_count in tokens.items():
             f.write(f"{user}:{token_count}\n")
 
-# --- Ensure input state exists for clearing later ---
-if "user_input" not in st.session_state:
-    st.session_state["user_input"] = ""
+# --- Ensure input state exists for clearing safely ---
+if "input_text" not in st.session_state:
+    st.session_state["input_text"] = ""
 
-# --- UI: Logo & Title ---
+# --- UI: logo & title ---
 st.image("logo.png", width=200)
 st.title("🗣️ English Tutor")
 
@@ -37,12 +37,12 @@ username = st.text_input("Enter your username:")
 
 if username:
     tokens_data = load_tokens()
+
     if username not in tokens_data:
         tokens_data[username] = 1000
         save_tokens(tokens_data)
 
     tokens_remaining = tokens_data[username]
-
     st.subheader(f"Hello, {username}!")
     st.markdown(f"**Tokens remaining:** {tokens_remaining}")
 
@@ -50,8 +50,12 @@ if username:
     if tokens_remaining <= 0:
         st.error("You have used up all your tokens. Please purchase more to continue.")
     else:
-        # --- Ask the tutor ---
-        user_input = st.text_area("Ask your tutor anything:", key="user_input")
+        # --- Controlled input box ---
+        user_input = st.text_area(
+            "Ask your tutor anything:",
+            value=st.session_state["input_text"],
+            key="input_text"
+        )
 
         if st.button("Submit"):
             if user_input.strip():
@@ -66,14 +70,14 @@ if username:
                     answer = response.choices[0].message.content
                     st.write(f"🤖 **Tutor:** {answer}")
 
-                    # Actual token usage
+                    # Use actual OpenAI tokens
                     tokens_used = response.usage.total_tokens
                     tokens_data[username] -= tokens_used
                     save_tokens(tokens_data)
                     st.success(f"Tokens used: {tokens_used}. Remaining: {tokens_data[username]}")
 
-                    # ✅ Clear input for next question
-                    st.session_state["user_input"] = ""
+                    # ✅ Clear input safely
+                    st.session_state["input_text"] = ""
             else:
                 st.warning("Please enter a question.")
 else:
