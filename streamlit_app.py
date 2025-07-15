@@ -2,10 +2,10 @@ import streamlit as st
 from openai import OpenAI
 import os
 
-# Load OpenAI API key from Streamlit secrets
+# --- Setup OpenAI client ---
 client = OpenAI(api_key=st.secrets["OPENAI"]["API_KEY"])
 
-# --- File handling for token counts ---
+# --- Helper to load & save user tokens ---
 if not os.path.exists("user_tokens.txt"):
     with open("user_tokens.txt", "w") as f:
         pass
@@ -24,20 +24,14 @@ def save_tokens(tokens):
         for user, token_count in tokens.items():
             f.write(f"{user}:{token_count}\n")
 
-# --- Ensure input state exists for clearing safely ---
-if "input_text" not in st.session_state:
-    st.session_state["input_text"] = ""
-
-# --- UI: logo & title ---
+# --- UI ---
 st.image("logo.png", width=200)
 st.title("🗣️ English Tutor")
 
-# --- Username input ---
 username = st.text_input("Enter your username:")
 
 if username:
     tokens_data = load_tokens()
-
     if username not in tokens_data:
         tokens_data[username] = 1000
         save_tokens(tokens_data)
@@ -46,16 +40,10 @@ if username:
     st.subheader(f"Hello, {username}!")
     st.markdown(f"**Tokens remaining:** {tokens_remaining}")
 
-    # --- If out of tokens ---
     if tokens_remaining <= 0:
         st.error("You have used up all your tokens. Please purchase more to continue.")
     else:
-        # --- Controlled input box ---
-        user_input = st.text_area(
-            "Ask your tutor anything:",
-            value=st.session_state["input_text"],
-            key="input_text"
-        )
+        user_input = st.text_area("Ask your tutor anything:")
 
         if st.button("Submit"):
             if user_input.strip():
@@ -70,14 +58,10 @@ if username:
                     answer = response.choices[0].message.content
                     st.write(f"🤖 **Tutor:** {answer}")
 
-                    # Use actual OpenAI tokens
                     tokens_used = response.usage.total_tokens
                     tokens_data[username] -= tokens_used
                     save_tokens(tokens_data)
                     st.success(f"Tokens used: {tokens_used}. Remaining: {tokens_data[username]}")
-
-                    # ✅ Clear input safely
-                    st.session_state["input_text"] = ""
             else:
                 st.warning("Please enter a question.")
 else:
