@@ -49,7 +49,7 @@ if username:
             if user_input.strip():
                 with st.spinner("Thinking..."):
                     response = client.chat.completions.create(
-                        model="gpt-4.1-nano",
+                        model="ft:gpt-4.1-nano-2025-04-14:mindspring:is:Btdc9DG0",
                         messages=[
                             {"role": "system", "content": "You are an English tutor. Answer clearly and helpfully."},
                             {"role": "user", "content": user_input}
